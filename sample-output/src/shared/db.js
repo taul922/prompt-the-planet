@@ -10,13 +10,19 @@ const {
   QueryCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const { Logger } = require("@aws-lambda-powertools/logger");
-const { Metrics } = require("@aws-lambda-powertools/metrics");
+const { Metrics, MetricUnit } = require("@aws-lambda-powertools/metrics");
+const { Tracer } = require("@aws-lambda-powertools/tracer");
 
 const logger = new Logger({ serviceName: "TaskManager" });
 const metrics = new Metrics({ namespace: "TaskManager" });
+const tracer = new Tracer({ serviceName: "TaskManager" });
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
+
+// Enable X-Ray tracing on DynamoDB clients
+tracer.captureAWSv3Client(client);
+tracer.captureAWSv3Client(docClient);
 
 const TABLE_NAME = process.env.TASKS_TABLE;
 
@@ -75,7 +81,7 @@ async function createTask(userId, data) {
     })
   );
 
-  metrics.addMetric("TaskCreated", 1, "Count");
+  metrics.addMetric("TaskCreated", MetricUnit.Count, 1);
   return item;
 }
 
@@ -116,9 +122,6 @@ async function listTasks(userId, status) {
         TableName: TABLE_NAME,
         IndexName: "gsi1",
         KeyConditionExpression: "gsi1pk = :pk",
-        ExpressionAttributeValues: {
-          ":pk": `TASK#STATUS#${status}`,
-        },
         FilterExpression: "userId = :userId",
         ExpressionAttributeValues: {
           ":pk": `TASK#STATUS#${status}`,
@@ -205,7 +208,7 @@ async function updateTask(userId, taskId, data) {
     })
   );
 
-  metrics.addMetric("TaskUpdated", 1, "Count");
+  metrics.addMetric("TaskUpdated", MetricUnit.Count, 1);
   return { ...existing, ...data, updatedAt: now };
 }
 
@@ -226,7 +229,7 @@ async function deleteTask(userId, taskId) {
     })
   );
 
-  metrics.addMetric("TaskDeleted", 1, "Count");
+  metrics.addMetric("TaskDeleted", MetricUnit.Count, 1);
   return { message: "Task deleted successfully", id: taskId };
 }
 

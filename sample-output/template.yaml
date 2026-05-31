@@ -325,38 +325,50 @@ Resources:
         CloudWatchMetricsEnabled: true
         MetricName: !Sub "${AWS::StackName}-waf-metrics"
       Rules:
-        - Name: AWS-AWSManagedRulesCommonRuleSet
+        - Name: IPRateLimit
           Priority: 0
+          Statement:
+            RateBasedStatement:
+              Limit: 1000
+              AggregateKeyType: IP
+          Action:
+            Block: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${AWS::StackName}-waf-rate-limit"
+        - Name: AWS-AWSManagedRulesCommonRuleSet
+          Priority: 1
           Statement:
             ManagedRuleGroupStatement:
               VendorName: AWS
               Name: AWSManagedRulesCommonRuleSet
           OverrideAction:
-            Count: {}
+            None: {}
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub "${AWS::StackName}-waf-common-rules"
         - Name: AWS-AWSManagedRulesSQLiRuleSet
-          Priority: 1
+          Priority: 2
           Statement:
             ManagedRuleGroupStatement:
               VendorName: AWS
               Name: AWSManagedRulesSQLiRuleSet
           OverrideAction:
-            Count: {}
+            None: {}
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub "${AWS::StackName}-waf-sqli-rules"
         - Name: AWS-AWSManagedRulesKnownBadInputsRuleSet
-          Priority: 2
+          Priority: 3
           Statement:
             ManagedRuleGroupStatement:
               VendorName: AWS
               Name: AWSManagedRulesKnownBadInputsRuleSet
           OverrideAction:
-            Count: {}
+            None: {}
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
@@ -377,16 +389,16 @@ Resources:
       AlarmName: !Sub "${AWS::StackName}-api-5xx-${EnvironmentName}"
       AlarmDescription: "API Gateway 5XX error rate exceeded 1%"
       Metrics:
-        - Id: m1
+        - Id: e1
           ReturnData: true
           Expression: "m2 / m1 * 100"
           Label: "5xxErrorRate"
-        - Id: m2
+        - Id: m1
           ReturnData: false
           MetricStat:
             Metric:
               Namespace: AWS/ApiGateway
-              MetricName: 5XXError
+              MetricName: Count
               Dimensions:
                 - Name: ApiId
                   Value: !Ref HttpApi
@@ -394,12 +406,12 @@ Resources:
                   Value: !Ref EnvironmentName
             Period: 300
             Stat: Sum
-        - Id: m1
+        - Id: m2
           ReturnData: false
           MetricStat:
             Metric:
               Namespace: AWS/ApiGateway
-              MetricName: Count
+              MetricName: 5XXError
               Dimensions:
                 - Name: ApiId
                   Value: !Ref HttpApi
@@ -419,7 +431,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub "${AWS::StackName}-lambda-errors-${EnvironmentName}"
-      AlarmDescription: "Lambda error count > 0"
+      AlarmDescription: "Any Lambda function error count > 0 in 5 minutes"
       Namespace: AWS/Lambda
       MetricName: Errors
       Statistic: Sum
@@ -434,6 +446,86 @@ Resources:
       Dimensions:
         - Name: FunctionName
           Value: !Ref CreateTaskFunction
+
+  LambdaErrorAlarmGetTask:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-lambda-errors-getTask-${EnvironmentName}"
+      AlarmDescription: "GetTaskFunction error count > 0 in 5 minutes"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref GetTaskFunction
+
+  LambdaErrorAlarmListTasks:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-lambda-errors-listTasks-${EnvironmentName}"
+      AlarmDescription: "ListTasksFunction error count > 0 in 5 minutes"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ListTasksFunction
+
+  LambdaErrorAlarmUpdateTask:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-lambda-errors-updateTask-${EnvironmentName}"
+      AlarmDescription: "UpdateTaskFunction error count > 0 in 5 minutes"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref UpdateTaskFunction
+
+  LambdaErrorAlarmDeleteTask:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${AWS::StackName}-lambda-errors-deleteTask-${EnvironmentName}"
+      AlarmDescription: "DeleteTaskFunction error count > 0 in 5 minutes"
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmTopic
+      OKActions:
+        - !Ref AlarmTopic
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref DeleteTaskFunction
 
   DynamoDBThrottleAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -491,9 +583,6 @@ Resources:
           Unit: USD
         TimeUnit: MONTHLY
         BudgetType: COST
-        CostFilters:
-          TagKeyValue:
-            - "Environment$<EnvironmentName>"
       NotificationsWithSubscribers:
         - Notification:
             NotificationType: ACTUAL
@@ -502,7 +591,7 @@ Resources:
             ThresholdType: PERCENTAGE
           Subscribers:
             - SubscriptionType: EMAIL
-              Address: "admin@example.com"  # CHANGE THIS
+              Address: "admin@example.com"  # CHANGE THIS to your email address
 
   # ============================================================================
   # KMS Key for Encryption
@@ -525,7 +614,12 @@ Resources:
           - Sid: Allow Lambda Use
             Effect: Allow
             Principal:
-              AWS: !GetAtt CreateTaskFunction.Role.Arn
+              AWS:
+                - !GetAtt CreateTaskFunction.Role.Arn
+                - !GetAtt GetTaskFunction.Role.Arn
+                - !GetAtt ListTasksFunction.Role.Arn
+                - !GetAtt UpdateTaskFunction.Role.Arn
+                - !GetAtt DeleteTaskFunction.Role.Arn
             Action:
               - kms:Encrypt
               - kms:Decrypt
