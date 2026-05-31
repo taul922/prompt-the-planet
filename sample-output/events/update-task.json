@@ -1,0 +1,18 @@
+{
+  "body": "{\"title\": \"Deploy serverless API to production\", \"status\": \"in_progress\", \"priority\": \"critical\"}",
+  "pathParameters": {
+    "id": "task-12345-abcde"
+  },
+  "requestContext": {
+    "authorizer": {
+      "jwt": {
+        "claims": {
+          "sub": "user-12345-abcde",
+          "email": "dev@example.com",
+          "cognito:username": "dev@example.com"
+        }
+      }
+    },
+    "requestId": "test-request-004"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "body": "{\"title\": \"Deploy serverless API\", \"description\": \"Use SAM to deploy the task manager API to production\", \"status\": \"todo\", \"priority\": \"high\"}",
+  "requestContext": {
+    "authorizer": {
+      "jwt": {
+        "claims": {
+          "sub": "user-12345-abcde",
+          "email": "dev@example.com",
+          "cognito:username": "dev@example.com"
+        }
+      }
+    },
+    "requestId": "test-request-001"
+  }
+}

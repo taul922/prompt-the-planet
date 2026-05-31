@@ -1,0 +1,18 @@
+{
+  "queryStringParameters": {
+    "status": "todo",
+    "limit": "20"
+  },
+  "requestContext": {
+    "authorizer": {
+      "jwt": {
+        "claims": {
+          "sub": "user-12345-abcde",
+          "email": "dev@example.com",
+          "cognito:username": "dev@example.com"
+        }
+      }
+    },
+    "requestId": "test-request-002"
+  }
+}
