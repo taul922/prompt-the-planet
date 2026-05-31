@@ -373,6 +373,18 @@ Resources:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
             MetricName: !Sub "${AWS::StackName}-waf-known-bad-inputs"
+        - Name: AWS-AWSManagedRulesAmazonIpReputationList
+          Priority: 4
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub "${AWS::StackName}-waf-ip-reputation"
 
   HttpApiWebAclAssociation:
     Type: AWS::WAFv2::WebACLAssociation
